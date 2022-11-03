@@ -4,7 +4,6 @@ import os
 import sys
 pythonpath = os.path.abspath(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-print(pythonpath)
 sys.path.insert(0, pythonpath)
 import os.path as op
 import json
@@ -92,7 +91,7 @@ def mixed_precision_init(args, model):
     
     if args.mixed_precision_method == "deepspeed":
         config = get_deepspeed_config(args)
-        model, optimizer, _, _ = deepspeed.initialize(
+        model, optimizer, _, scheduler = deepspeed.initialize(
             config_params=config,
             model=model,
             optimizer=optimizer,
@@ -374,7 +373,7 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                         exist_key2pred[parts[0]] = parts[1]
 
         with torch.no_grad():
-            for step, (img_keys, batch, meta_data) in tqdm(enumerate(test_dataloader)):
+            for step, (img_keys, batch, meta_data) in enumerate(tqdm(test_dataloader)):
                 # torch.cuda.empty_cache()
                 is_exist = True
                 for k in img_keys:
@@ -585,7 +584,7 @@ def main(args):
         logger.info(f"Loading state dict from checkpoint {ckpt_path}")
         cpu_device = torch.device('cpu')
         pretrained_model = torch.load(ckpt_path, map_location=cpu_device)
-
+        
         if args.learn_mask_enabled == False:
             if isinstance(pretrained_model, dict):
                 vl_transformer.load_state_dict(pretrained_model, strict=False)

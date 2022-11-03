@@ -323,8 +323,7 @@ def basic_check_arguments(args):
         LOGGER.info("Deepspeed is not enabled. We will disable the relevant args --zero_opt_stage and --deepspeed_fp16.")
         args.zero_opt_stage = -1
         args.deepspeed_fp16 = False
-    
-    if args.mixed_precision_method != "fairscale":
+    elif args.mixed_precision_method != "fairscale":
         LOGGER.info("Fairscale is not enabled. We will disable the relevant args --fairscale_fp16.")
         args.zero_opt_stage = -1
         args.fairscale_fp16 = False
