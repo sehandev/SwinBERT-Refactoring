@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  dev:
+    image: linjieli222/videocap_torch1.7:fairscale
+    working_dir: /videocap
+    volumes:
+      - .:/videocap
+      - /data/dataset/SwinBERT/datasets:/videocap/datasets
+      - type: bind
+        source: ./models
+        target: /videocap/models
+        read_only: true
+      - type: bind
+        source: /data
+        target: /data
+        read_only: true
+    environment:
+      - TZ=Asis/Seoul
+    shm_size: '16gb'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    stdin_open: true
+    command: bash -c "source /videocap/setup.sh && bash" 
