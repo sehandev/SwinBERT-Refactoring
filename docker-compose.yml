@@ -5,15 +5,10 @@ services:
     working_dir: /videocap
     volumes:
       - .:/videocap
-      - /data/dataset/SwinBERT/datasets:/videocap/datasets
-      - type: bind
-        source: ./models
-        target: /videocap/models
-        read_only: true
-      - type: bind
-        source: /data
-        target: /data
-        read_only: true
+      - /data/dataset/SwinBERT-Refactoring/datasets:/videocap/datasets
+      - /data/dataset/SwinBERT-Refactoring/predictions:/videocap/predictions
+      - /data/dataset/SwinBERT-Refactoring/models:/videocap/models
+      - /data:/data
     environment:
       - TZ=Asis/Seoul
     shm_size: '16gb'
@@ -25,4 +20,4 @@ services:
               count: all
               capabilities: [ gpu ]
     stdin_open: true
-    command: bash -c "source /videocap/setup.sh && bash" 
+    command: bash -c "source /videocap/setup.sh && bash"
