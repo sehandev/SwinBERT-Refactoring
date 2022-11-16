@@ -567,3 +567,23 @@ If you find these works helpful, please consider citing them as well.
 [FAIR/FairScale](https://github.com/facebookresearch/fairscale)
 
 
+```
+docker compose up -d dev
+docker compose exec dev bash
+```
+
+```
+python prepro/extract_frames_refactoring.py \
+  --video_root_dir /data/dataset/CondensedMovies/videos_mp4/train/ \
+  --fps 1
+python prepro/extract_frames_refactoring.py \
+  --video_root_dir /data/dataset/CondensedMovies/videos_mp4/val/ \
+  --fps 1
+python prepro/extract_frames_refactoring.py \
+  --video_root_dir /data/dataset/CondensedMovies/videos_mp4/test/ \
+  --fps 1
+```
+
+```
+deepspeed --include localhost:4,5,6,7 src/tasks/run_caption_VidSwinBert.py --config src/configs/VidSwinBert/cmd_train.json
+```

@@ -20,14 +20,17 @@ class FrameExtractDataset(Dataset):
     @staticmethod
     def get_mp4_path_list(video_root_dir: str) -> List[Path]:
         root_dir = Path(video_root_dir).absolute()
-        path_list = list(root_dir.glob("**/*.mp4"))
+        path_list = list(root_dir.glob("*.mp4"))
         path_list = sorted(path_list)
         return path_list
 
-    def get_frame_dir(self, video_path: Path) -> Path:
+    def get_frame_dir(self, video_path: Path) -> Tuple[Path, bool]:
         frame_dir = video_path.parent / video_path.stem
+        if frame_dir.exists():
+            return frame_dir, True
+
         frame_dir.mkdir(exist_ok=True)
-        return frame_dir
+        return frame_dir, False
 
     def get_frame_info(self, video) -> Tuple[float, int]:
         fps = video.get(cv2.CAP_PROP_FPS)
@@ -38,13 +41,17 @@ class FrameExtractDataset(Dataset):
         video.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         ret, frame = video.read()
         if not ret:
-            print(f"Error read video - {frame_dir} / frame {frame_idx:06d}")
+            print(f"Error read video - {frame_dir} - frame: {frame_idx:06d}")
+            return
 
         frame_path = frame_dir / f"{frame_idx:06d}.jpg"
         self.save_frame(str(frame_path), frame)
 
     def extract_frames(self, video_path: str) -> None:
-        frame_dir = self.get_frame_dir(video_path)
+        frame_dir, is_exist = self.get_frame_dir(video_path)
+        if is_exist:
+            return
+
         video_path = str(video_path)
         video = cv2.VideoCapture(video_path)
 

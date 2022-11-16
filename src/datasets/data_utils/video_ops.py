@@ -1,16 +1,24 @@
-from PIL import Image
 import io
 import av
 import torch
-import numpy as np
-from src.datasets.data_utils import video_decoder as decoder
-import code
 
-def get_video_decoding_kwargs(container, num_frames, target_fps,
-                              num_clips=None, clip_idx=None,
-                              sampling_strategy="rand",
-                              safeguard_duration=False, video_max_pts=None,
-                              start=None, end=None):
+from src.datasets.data_utils import video_decoder as decoder
+import os
+from torchvision import io
+
+
+def get_video_decoding_kwargs(
+    container,
+    num_frames,
+    target_fps,
+    num_clips=None,
+    clip_idx=None,
+    sampling_strategy="rand",
+    safeguard_duration=False,
+    video_max_pts=None,
+    start=None,
+    end=None,
+):
     if num_clips is None:
         three_clip_names = ["start", "middle", "end"]  # uniformly 3 clips
         assert sampling_strategy in ["rand", "uniform"] + three_clip_names
@@ -22,7 +30,8 @@ def get_video_decoding_kwargs(container, num_frames, target_fps,
                 clip_idx=-1,  # random sampling
                 num_clips=None,  # will not be used when clip_idx is `-1`
                 target_fps=target_fps,
-                start=start, end=end
+                start=start,
+                end=end,
             )
         elif sampling_strategy == "uniform":
             decoder_kwargs = dict(
@@ -32,7 +41,8 @@ def get_video_decoding_kwargs(container, num_frames, target_fps,
                 clip_idx=-2,  # uniformly sampling from the whole video
                 num_clips=1,  # will not be used when clip_idx is `-2`
                 target_fps=target_fps,  # will not be used when clip_idx is `-2`
-                start=start, end=end
+                start=start,
+                end=end,
             )
         else:  # in three_clip_names
             decoder_kwargs = dict(
@@ -42,7 +52,8 @@ def get_video_decoding_kwargs(container, num_frames, target_fps,
                 clip_idx=three_clip_names.index(sampling_strategy),
                 num_clips=3,
                 target_fps=target_fps,
-                start=start, end=end
+                start=start,
+                end=end,
             )
     else:  # multi_clip_ensemble, num_clips and clip_idx are only used here
         assert clip_idx is not None
@@ -58,33 +69,76 @@ def get_video_decoding_kwargs(container, num_frames, target_fps,
             target_fps=target_fps,
             safeguard_duration=safeguard_duration,
             video_max_pts=video_max_pts,
-            start=start, end=end
+            start=start,
+            end=end,
         )
     return decoder_kwargs
 
+
 def extract_frames_from_video_path(
-        video_path, target_fps=3, num_frames=3,
-        multi_thread_decode=False, sampling_strategy="rand",
-        safeguard_duration=False, start=None, end=None):
+    video_path,
+    target_fps=3,
+    num_frames=3,
+    multi_thread_decode=False,
+    sampling_strategy="rand",
+    safeguard_duration=False,
+    start=None,
+    end=None,
+):
     in_mem_bytes_io = video_path
     try:
         frames, video_max_pts = extract_frames_from_video_binary(
-            in_mem_bytes_io, target_fps=target_fps, num_frames=num_frames,
+            in_mem_bytes_io,
+            target_fps=target_fps,
+            num_frames=num_frames,
             multi_thread_decode=multi_thread_decode,
             sampling_strategy=sampling_strategy,
             safeguard_duration=safeguard_duration,
-            start=start, end=end)
+            start=start,
+            end=end,
+        )
     except Exception as e:
         print(f"Error processing video {video_path}, {e}")
         return None, None
     return frames, video_max_pts
 
 
+def read_frame(frame_path: str) -> torch.Tensor:
+    """JPEG or PNG"""
+    return io.read_image(frame_path, io.image.ImageReadMode.RGB)
+
+
+def get_frames_from_dir(
+    frames_dir: str,
+    num_frames: int = 3,
+) -> torch.Tensor:
+    """Uniformly picked frames"""
+    filename_list = sorted(os.listdir(frames_dir))
+    interval = len(filename_list) // num_frames
+    idx_list = [interval * frame_idx for frame_idx in range(num_frames)]
+    try:
+        frames = [read_frame(f"{frames_dir}/{filename_list[idx]}") for idx in idx_list]
+    except Exception as e:
+        print(f"Error processing video {frames_dir}, {e}")
+        return None
+
+    frames = torch.stack(frames, dim=0)
+    return frames
+
+
 def extract_frames_from_video_binary(
-        in_mem_bytes_io, target_fps=3, num_frames=3, num_clips=None, clip_idx=None,
-        multi_thread_decode=False, sampling_strategy="rand",
-        safeguard_duration=False, video_max_pts=None,
-        start=None, end=None):
+    in_mem_bytes_io,
+    target_fps=3,
+    num_frames=3,
+    num_clips=None,
+    clip_idx=None,
+    multi_thread_decode=False,
+    sampling_strategy="rand",
+    safeguard_duration=False,
+    video_max_pts=None,
+    start=None,
+    end=None,
+):
     """
     Args:
         in_mem_bytes_io: binary from read file object
@@ -129,7 +183,9 @@ def extract_frames_from_video_binary(
         # When verified visually, it does not seem to affect the extracted frames.
         video_container = av.open(in_mem_bytes_io, metadata_errors="ignore")
     except Exception as e:
-        print(f"extract_frames_from_video_binary(), Exception in loading video binary: {e}")
+        print(
+            f"extract_frames_from_video_binary(), Exception in loading video binary: {e}"
+        )
         return None, None
 
     if multi_thread_decode:
@@ -139,11 +195,17 @@ def extract_frames_from_video_binary(
         # (T, H, W, C), channels are RGB
         # see docs in decoder.decode for usage of these parameters.
         decoder_kwargs = get_video_decoding_kwargs(
-            container=video_container, num_frames=num_frames,
-            target_fps=target_fps, num_clips=num_clips, clip_idx=clip_idx,
+            container=video_container,
+            num_frames=num_frames,
+            target_fps=target_fps,
+            num_clips=num_clips,
+            clip_idx=clip_idx,
             sampling_strategy=sampling_strategy,
-            safeguard_duration=safeguard_duration, video_max_pts=video_max_pts, 
-            start=start, end=end)
+            safeguard_duration=safeguard_duration,
+            video_max_pts=video_max_pts,
+            start=start,
+            end=end,
+        )
         frames, video_max_pts = decoder.decode(**decoder_kwargs)
     except Exception as e:
         print(f"extract_frames_from_video_binary(), Exception in decoding video: {e}")
